@@ -10,7 +10,7 @@ The script utilizes the Hugging Face Transformers library to summarize the conte
 ## Usage
 
 1. Place your text files in the same folder as the script.
-2. Run the script by executing `python summarize_text_files.py` in your terminal or command prompt.
+2. Run the script by executing `python Summarizing-Academic-Articles-and-Export-to-Excel.py` in your terminal or command prompt.
 3. The script will process each text file and save the summaries to an Excel file named "summaries.xlsx".
 
 ## Credit
