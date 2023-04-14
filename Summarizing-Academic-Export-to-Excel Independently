@@ -6,6 +6,10 @@ from transformers import pipeline
 import tqdm
 from datetime import datetime
 import openpyxl
+from openpyxl.styles import Alignment, Font, Border, Side, PatternFill
+import nltk
+
+nltk.download("punkt")
 
 def progress_bar(current, total, message):
     bar_length = 50
@@ -18,21 +22,54 @@ def progress_bar(current, total, message):
 summarizer = pipeline("summarization", model="lidiya/bart-large-xsum-samsum")
 text_files = glob.glob("*.txt")
 
-file_id = 0
-
 for text_file in text_files:
     author, title, year, journal = text_file[:-4].split("-")
+
+    summary_file = f"summary_of_{author}-{title}-{year}-{journal}.xlsx"
+    if os.path.exists(summary_file):
+        print(f"Summary file for {text_file} already exists. Skipping summarization.")
+        continue
     
-    # Create a new Excel file for each text file
     workbook = openpyxl.Workbook()
     sheet = workbook.active
-    sheet.append(["ID", "Author", "Title", "Year", "Journal", "Summary ID", "Summary", "Date"])
+    
+    header_font = Font(bold=True)
+    header_fill = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
+    header_border = Border(left=Side(style="thin"),
+                           right=Side(style="thin"),
+                           top=Side(style="thin"),
+                           bottom=Side(style="thin"))
+
+    headers = ["ID", "Author", "Title", "Year", "Journal", "Summary ID", "Summary", "Date"]
+    for col_num, value in enumerate(headers, 1):
+        cell = sheet.cell(row=1, column=col_num)
+        cell.value = value
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.border = header_border
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
     with open(text_file, "r", encoding="utf-8") as f:
         content = f.read()
 
     chunk_size = 1024
-    chunks = [content[i:i+chunk_size] for i in range(0, len(content), chunk_size)]
+    sentences = nltk.sent_tokenize(content)
+
+    chunks = []
+    chunk = []
+    chunk_length = 0
+    for sentence in sentences:
+        sentence_length = len(sentence)
+        if chunk_length + sentence_length <= chunk_size:
+            chunk.append(sentence)
+            chunk_length += sentence_length
+        else:
+            chunks.append(" ".join(chunk))
+            chunk = [sentence]
+            chunk_length = sentence_length
+
+    if chunk:
+        chunks.append(" ".join(chunk))
 
     summaries = []
     for i, chunk in enumerate(chunks):
@@ -43,21 +80,34 @@ for text_file in text_files:
         summaries.append(summary[0]["summary_text"])
 
     current_date = datetime.today().strftime('%Y-%m-%d')
-    file_id += 1
+
+    file_id = "1"
 
     for i, summary in enumerate(summaries):
         summary_id = f"{file_id}-{i + 1}"
         new_row = [file_id, author, title, year, journal, summary_id, summary, current_date]
         sheet.append(new_row)
 
+        row_number = sheet.max_row
+        for col_number, cell in enumerate(new_row, 1):
+            sheet_cell = sheet.cell(row=row_number, column=col_number)
+            sheet_cell.border = Border(left=Side(style="thin"),
+                                       right=Side(style="thin"),
+                                       top=Side(style="thin"),
+                                       bottom=Side(style="thin"))
+            sheet_cell.alignment = Alignment(vertical="top", wrap_text=True)
+            if col_number == 7:  # Summary column
+                sheet_cell.font = Font(size=11)
+                sheet.row_dimensions[row_number].height = 80  # Adjust row height
+
     print(f"Summary of {text_file} added to the Excel file.")
 
     # Adjust the width of the "Summary" column
-    sheet.column_dimensions["G"].width = 100
+    sheet.column_dimensions["G"].width = 80
 
     # Freeze the first row
     sheet.freeze_panes = "A2"
 
     # Save the workbook with a unique name based on the text file
-    excel_file = f"summary_of_{author}-{title}-{year}-{journal}.xlsx"
+    excel_file = summary_file
     workbook.save(excel_file)
