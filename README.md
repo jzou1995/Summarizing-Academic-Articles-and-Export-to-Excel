@@ -1,3 +1,6 @@
+#summarization_facebook_model
+This code uses the facebook/bart-large-cnn model to summarize text files. Compare to lidiya model in earlier version, the facebook model is more adapt to academic writings whereas lidiya model works better for interviews and conversations. For example, you can use the lidiya model to processes subtitles from interviews videos. But Facebook model outperforms in completeness and coherence for academic articles. 
+
 # Summarizing-Academic-Articles-and-Export-to-Excel
 This code uses the lidiya/bart-large-xsum-samsum model to summarize text files. It exports the summary to an Excel file with columns for author, title, year, journal, and IDs. The article is divided into chunks for summarization, creating more rows for longer articles.
 
